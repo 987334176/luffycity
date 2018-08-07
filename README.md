@@ -26,10 +26,10 @@ s11luffycity\app01里面有一个tests.py，可以直接运行，也有答案！
 `python manage.py runserver`
 
 ## 表关系
-本项目涉及8个表，表关系包含一对一，一对多，多对多！
+本项目涉及13个表，表关系包含一对一，一对多，多对多！
 表关系图如下：
 
-![Image text](https://www.processon.com/view/link/5b5839dee4b0555b39c456ce)
+![Image text](https://github.com/987334176/luffycity/blob/master/%E8%A1%A8%E5%85%B3%E7%B3%BB.png)
 
 图中箭头开始的英文字母表示关联字段
 
