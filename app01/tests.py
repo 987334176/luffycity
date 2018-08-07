@@ -81,9 +81,12 @@ if __name__ == "__main__":
     #
     # i.获取id = 1
     # 的专题课，并打印该课程相关的所有的价格策略
-    obj = models.Course.objects.filter(id=1).values("coursechapters__name", "coursechapters__coursesections__name")
-
-    print(obj)
+    # obj = models.Course.objects.filter(id=1).values("coursechapters__name", "coursechapters__coursesections__name")
+    #
+    # print(obj)
+    obj =models.Course.objects.get(id=1)
+    chapter_list = obj.coursechapter_set.all()
+    print(chapter_list)
 
 
 

@@ -189,7 +189,7 @@ class CourseOutline(models.Model):
 
 class CourseChapter(models.Model):
     """课程章节"""
-    course = models.ForeignKey("Course", related_name='coursechapters')
+    course = models.ForeignKey("Course")
     chapter = models.SmallIntegerField(verbose_name="第几章", default=1)
     name = models.CharField(max_length=128)
     summary = models.TextField(verbose_name="章节介绍", blank=True, null=True)
@@ -205,7 +205,7 @@ class CourseChapter(models.Model):
 
 class CourseSection(models.Model):
     """课时目录"""
-    chapter = models.ForeignKey("CourseChapter", related_name='coursesections')
+    chapter = models.ForeignKey("CourseChapter")
     name = models.CharField(max_length=128)
     order = models.PositiveSmallIntegerField(verbose_name="课时排序", help_text="建议每个课时之间空1至2个值，以备后续插入课时")
     section_type_choices = ((0, '文档'), (1, '练习'), (2, '视频'))

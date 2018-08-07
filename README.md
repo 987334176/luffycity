@@ -1,10 +1,6 @@
 ## 说明
 路飞学城
 
-## ORM作业
-s11luffycity\app01里面有一个tests.py，可以直接运行，也有答案！
-或者s11luffycity\app01\views.py，不能运行，只有答案！
-
 ## 运行环境
 
 | Project | Status | Description |
@@ -12,12 +8,19 @@ s11luffycity\app01里面有一个tests.py，可以直接运行，也有答案！
 | python          | 3.5.4 | 在这个版本以及以上都可以 |
 | django                | 1.11 | 必须此版本 |
 
-## 功能
+## API说明
 
-| 路径 | 功能 | 技术说明 |
-|---------|--------|-------------|
-| /api/course/          | 课程列表 | Django REST framework |
-| /api/course/1/          | 单个课程 | Django REST framework |
+| 路径 | 功能 |
+|---------|--------|
+| /api/v1/degreecourse/teachers/          | 查看所有学位课并打印学位课名称以及授课老师 |
+| /api/v1/degreecourse/scholarship/          | 查看所有学位课并打印学位课名称以及学位课的奖学金 |
+| /api/v1/courses/thematic/          | 展示所有的专题课 |
+| /api/v1/courses/module/1/          | 查看id=1的学位课对应的所有模块名称 |
+| /api/v1/courses/1/          | 获取id = 1的专题课，并打印：课程名、级别(中文)、why_study、what_to_study_brief、所有recommend_courses |
+| /api/v1/courses/faq/1/          | 获取id = 1的专题课，并打印该课程相关的所有常见问题 |
+| /api/v1/courses/outline/1/          | 获取id = 1的专题课，并打印该课程相关的课程大纲 |
+| /api/v1/courses/chapter/1/          | 获取id = 1的专题课，并打印该课程相关的所有章节 |
+
 
 ## 运行方式
 
@@ -34,8 +37,6 @@ s11luffycity\app01里面有一个tests.py，可以直接运行，也有答案！
 图中箭头开始的英文字母表示关联字段
 
 按照箭头方向查询，表示正向查询，否则为反向查询
-
-## 效果
 
 
 Copyright (c) 2018-present, xiao You
