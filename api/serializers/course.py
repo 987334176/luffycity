@@ -45,14 +45,19 @@ class CourseDetailModelSerializer(serializers.ModelSerializer):  # 具体id的�
     what_to_study_brief = serializers.CharField(source='coursedetail.what_to_study_brief')
 
     recommend_courses = serializers.SerializerMethodField()
+    price_strategy = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Course
-        fields = ['id','name','level_name','why_study','what_to_study_brief','recommend_courses']
+        fields = ['id','name','level_name','why_study','what_to_study_brief','recommend_courses','price_strategy']
 
     def get_recommend_courses(self,row):
         recommend_list = row.coursedetail.recommend_courses.all()
         return [ {'id':item.id,'name':item.name} for item in recommend_list]
+
+    def get_price_strategy(self,row):
+        price_list = row.price_policy.all()
+        return [{'id': item.id, 'valid_period': item.valid_period,'price': item.price} for item in price_list]
 
 class CourseFAQModelSerializer(serializers.ModelSerializer):  # 具体id专题课程相关的所有常见问题
     asked_question = serializers.SerializerMethodField()

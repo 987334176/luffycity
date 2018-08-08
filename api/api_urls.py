@@ -1,8 +1,8 @@
 from django.conf.urls import url
-from api.views import course,degreecourse
+from api.views import course,degreecourse,auth,shoppingcart
 
 urlpatterns = [
-    # url(r'login/$', views.LoginView.as_view()),
+    url(r'auth/$', auth.AuthView.as_view({'post':'login'})),
     url(r'courses/$',course.CoursesView.as_view()),
     url(r'courses/(?P<pk>\d+)/$',course.CourseDetailView.as_view()),
     url(r'courses/thematic/$',course.CourseThematicView.as_view()),
@@ -15,5 +15,5 @@ urlpatterns = [
     url(r'degreecourse/teachers/$',degreecourse.DegreeCourseTeachersView.as_view()),
     url(r'degreecourse/scholarship/$',degreecourse.DegreeCourseScholarshipView.as_view()),
 
-
+    url(r'shoppingcart/$', shoppingcart.ShoppingCartView.as_view({'post':'create'})),
 ]

@@ -23,6 +23,7 @@ class SerializedData(object):  # 序列化通用格式数据
 
             ret.data = ser.data
         except Exception as e:
+            print(e)
             ret.code = 500
             ret.error = '获取数据失败'
 
