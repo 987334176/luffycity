@@ -20,6 +20,7 @@
 | /api/v1/courses/faq/1/          | 获取id = 1的专题课，并打印该课程相关的所有常见问题 |
 | /api/v1/courses/outline/1/          | 获取id = 1的专题课，并打印该课程相关的课程大纲 |
 | /api/v1/courses/chapter/1/          | 获取id = 1的专题课，并打印该课程相关的所有章节 |
+| /api/v1/shoppingcart/          | 添加到购物车 |
 
 
 ## 运行方式
