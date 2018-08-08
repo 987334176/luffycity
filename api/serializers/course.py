@@ -24,6 +24,11 @@ class CourseModelSerializer(serializers.ModelSerializer):  # 所有课程
         return [ {'id':item.id,'name':item.name} for item in recommend_list]
 
 class CourseThematicModelSerializer(serializers.ModelSerializer):  # 所有的专题课
+    level_name = serializers.CharField(source='get_level_display')
+    course_type = serializers.CharField(source='get_course_type_display')
+    status = serializers.CharField(source='get_status_display')
+    degree_course = serializers.CharField(source='degree_course.total_scholarship')
+
     class Meta:
         model = models.Course
         fields = '__all__'
