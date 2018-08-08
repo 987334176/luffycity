@@ -46,8 +46,8 @@ class ShoppingCartView(ViewSetMixin,APIView):
         # print(c_obj.price_policy.all())
         ret = {'code': 1000}
         try:
-            now_course = models.Course.objects.filter(id=1).first()
-            price_policy = now_course.price_policy.all()
+            now_course = models.Course.objects.filter(id=1).first()  # 当前课程
+            price_policy = now_course.price_policy.all()  # 当前课程所有价格策略
             # print(price_policy)
             price_id_list = []
             for i in price_policy:
@@ -63,7 +63,7 @@ class ShoppingCartView(ViewSetMixin,APIView):
             # print(price_id_list)
             # print(card_id)
             if card_id in price_id_list:
-                card_depot = models.PricePolicy.objects.filter(id=card_id).first()
+                card_depot = models.PricePolicy.objects.filter(id=card_id).first()  # 当前购物车价格策略
                 SHOPPING_CAR[1] = {1: {'title': now_course.name, 'price': card_depot.price, 'price_list': price_id_list}}
 
             else:
@@ -71,7 +71,7 @@ class ShoppingCartView(ViewSetMixin,APIView):
                 ret['errot'] = '非法请求'
 
         except Exception as e:
-            print(e)
+            # print(e)
             ret.code = 500
             ret.error = '获取数据失败'
 
