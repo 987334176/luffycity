@@ -15,5 +15,5 @@ urlpatterns = [
     url(r'degreecourse/teachers/$',degreecourse.DegreeCourseTeachersView.as_view()),
     url(r'degreecourse/scholarship/$',degreecourse.DegreeCourseScholarshipView.as_view()),
 
-    url(r'shoppingcart/$', shoppingcart.ShoppingCartView.as_view({'post':'create'})),
+    url(r'shoppingcart/$', shoppingcart.ShoppingCartView.as_view({'post':'create','get':'list','delete':'destroy','put':'update'})),
 ]
