@@ -20,6 +20,11 @@
 
 `pip3 install django_redis`
 
+## 特别说明
+如果启动项目时,api_urls.py执行时报错,views找不到xx模块时
+
+需要删除api目录下的views.py,这个文件没有用,由views目录管理了！
+
 ## API说明
 
 | 路径 | 功能 |
