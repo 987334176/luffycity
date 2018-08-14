@@ -7,6 +7,18 @@
 |---------|--------|-------------|
 | python          | 3.5.4 | 在这个版本以及以上都可以 |
 | django                | 1.11 | 必须此版本 |
+| django-cors-headers                | 2.4.0 | 版本以及以上 |
+| djangorestframework                | 3.8.2 | 版本以及以上 |
+| django_redis                | 4.9.0 | 版本以及以上 |
+
+## 安装环境
+`pip3 install django==1.11`
+
+`pip3 install django-cors-headers`
+
+`pip3 install djangorestframework`
+
+`pip3 install django_redis`
 
 ## API说明
 
