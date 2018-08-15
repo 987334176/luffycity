@@ -29,8 +29,10 @@
 
 | 路径 | 功能 |
 |---------|--------|
+| /api/v1/degreecourse/          | 查看所有学位课 |
 | /api/v1/degreecourse/teachers/          | 查看所有学位课并打印学位课名称以及授课老师 |
 | /api/v1/degreecourse/scholarship/          | 查看所有学位课并打印学位课名称以及学位课的奖学金 |
+| /api/v1/courses/          | 展示所有课程 |
 | /api/v1/courses/thematic/          | 展示所有的专题课 |
 | /api/v1/courses/module/1/          | 查看id=1的学位课对应的所有模块名称 |
 | /api/v1/courses/1/          | 获取id = 1的专题课，并打印：课程名、级别(中文)、why_study、what_to_study_brief、所有recommend_courses |
@@ -38,6 +40,7 @@
 | /api/v1/courses/outline/1/          | 获取id = 1的专题课，并打印该课程相关的课程大纲 |
 | /api/v1/courses/chapter/1/          | 获取id = 1的专题课，并打印该课程相关的所有章节 |
 | /api/v1/shoppingcart/          | 添加到购物车,支持增删改查,分别对应POST,DELETE,POST,GET |
+| /api/v1/payment/          | 添加结算中心,支持增加和查找,分别对应POST,GET |
 
 
 ## 运行方式
