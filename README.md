@@ -44,6 +44,8 @@
 
 
 ## 运行方式
+请务必启动Redis,否则admin后台无法登陆！或者造成其他未知错误！
+Redis配置在settings.py中
 
 使用Pycharm直接运行即可，
 或者使用命令
