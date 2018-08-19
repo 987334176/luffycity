@@ -41,6 +41,7 @@
 | /api/v1/courses/chapter/1/          | 获取id = 1的专题课，并打印该课程相关的所有章节 |
 | /api/v1/shoppingcart/          | 添加到购物车,支持增删改查,分别对应POST,DELETE,POST,GET |
 | /api/v1/payment/          | 添加结算中心,支持增加和查找,分别对应POST,GET |
+| /api/v1/auth/          | 登录认证,成功返回token |
 
 
 ## 运行方式
@@ -60,6 +61,25 @@ Redis配置在settings.py中
 图中箭头开始的英文字母表示关联字段
 
 按照箭头方向查询，表示正向查询，否则为反向查询
+
+# 效果图
+## 首页
+
+![Image text](https://github.com/987334176/luffycity/blob/master/%E6%95%88%E6%9E%9C%E5%9B%BE/%E9%A6%96%E9%A1%B5.png)
+
+## 课程
+
+![Image text](https://github.com/987334176/luffycity/blob/master/%E6%95%88%E6%9E%9C%E5%9B%BE/%E8%AF%BE%E7%A8%8B.png)
+
+## 课程详情
+#### 只能通过页面添加到购物车,必须要登录
+
+![Image text](https://github.com/987334176/luffycity/blob/master/%E6%95%88%E6%9E%9C%E5%9B%BE/%E8%AF%BE%E7%A8%8B%E8%AF%A6%E6%83%85.png)
+
+## 购物车
+#### 选择价格策略,前端和后端redis数据会更改。可以删除课程！此操作必须要登录
+
+![Image text](https://github.com/987334176/luffycity/blob/master/%E6%95%88%E6%9E%9C%E5%9B%BE/%E8%B4%AD%E7%89%A9%E8%BD%A6.png)
 
 
 Copyright (c) 2018-present, xiao You
