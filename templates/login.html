@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <script src="/static/sweetalert/sweetalert-dev.js"></script>
+    <link rel="stylesheet" href="/static/sweetalert/sweetalert.css">
+</head>
+<body>
+
+<div class="container">
+    <div style="height: 100px;"></div>
+    <form action="/api/v1/auth/" method="post">
+    <lable>用户名</lable>
+    <input type="text" name="username" id="user">
+    <lable>密码</lable>
+    <input type="password" name="password" id="pwd">
+    {#    <input type="submit" value="提交">#}
+    <input type="button" id="sub" value="登录">
+</form>
+</div>
+
+<script>
+    $("#sub").click(function () {
+        $.ajax({
+            url: "/api/v1/auth/",
+            type: "post",
+            data: {
+                username: $("#user").val(),
+                password: $("#pwd").val(),
+            },
+            success: function (data) {
+                console.log(data);
+                if (data.code == 1000) { //判断json的状态
+                    swal({
+                        title: '登录成功',
+                        type: 'success',  //展示成功的图片
+                        timer: 500,  //延时500毫秒
+                        showConfirmButton: false  //关闭确认框
+                    }, function () {
+                        window.location.href = "/index/";  //跳转
+                    });
+                } else {
+                    swal("登录失败！", data.error,
+                        "error");
+                    {#window.location = "/backend/add_category/";#}
+                }
+
+            },
+            error: function (data) {
+                swal("登录失败！请求异常", data.error, "error");
+            }
+        })
+
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <script src="/static/sweetalert/sweetalert-dev.js"></script>
+    <link rel="stylesheet" href="/static/sweetalert/sweetalert.css">
+
+    <div class="container">
+        <style type="text/css">
+            .table tbody tr td {
+                vertical-align: middle;
+            }
+
+            tbody tr td {
+                vertical-align: middle;
+            }
+        </style>
+
+        <h1>我的购物车</h1>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>
+                    课程
+                </th>
+                <th>
+                    有效期
+                </th>
+                <th>
+                    单价
+                </th>
+                <th>
+                    操作
+                </th>
+            </tr>
+            </thead>
+            <tbody v-for="item in message">
+            {% for item in shopping_list %}
+                <tr>
+                    <td>
+                        <img src="/static/images/django.png" alt="" width="170" height="115">
+                        <span style="margin-left: 50px">{{ item.name }}</span>
+
+                    </td>
+                    <td>
+                        <input type="hidden" value="{{ item.id }}">
+                        <select class="form-control sct" style="width: 100px">
+                            {% for sub in item.price_policy_dict %}
+                                <option value="{{ sub.id }}">
+                                    {{ sub.valid_period_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="price">
+                        {{ item.default_price }}
+                    </td>
+                    <td>
+                        <a href="javascript:void(0)" del_id="{{ item.id }}" class="delete">删除</a>
+                    </td>
+                </tr>
+            {% endfor %}
+
+
+            </tbody>
+        </table>
+        <div>
+            <button data-v-2ebdf748="" type="button" class="btn btn-lg btn-success pull-right"
+                    style="margin-left: 100px;">
+                去结算
+            </button>
+        </div>
+    </div>
+    <script>
+
+        $(".sct").change(function () {
+            {#console.log($(this).prev("input").val());  #}
+            {#console.log($(this).val());  #}
+            {#let that = $(this);#}
+            let courseid = $(this).prev("input").val();  //课程id
+            let policyid = $(this).val();  //价格策略id
+
+            let price = $(this).parent().next(); //获取价格
+
+            $.ajax({
+                url: "/api/v1/shoppingcart/",
+                type: "put",
+                data: {
+                    courseid: courseid,
+                    policyid: policyid,
+                    token: "{{request.session.token}}",
+                },
+                success: function (data) {
+                    console.log(data);
+                    if (data.code == 1000) { //判断json的状态
+                        price.text(data.price);  //修改网页价格
+                        console.log('价格策略修改成功');
+                    } else {
+                        console.log('价格策略修改失败');
+                    }
+
+                },
+                error: function (data) {
+                    swal("修改失败！请求异常", data.error, "error");
+                }
+            })
+        });
+
+        $('.delete').click(function () {
+            {#console.log($(this).attr("del_id"));#}
+            let courseid = $(this).attr("del_id");  //课程id
+            $.ajax({
+                url: "/api/v1/shoppingcart/",
+                type: "delete",
+                data: {
+                    courseid: courseid,
+                    {#policyid: policyid,#}
+                    token: "{{request.session.token}}",
+                },
+                success: function (data) {
+                    console.log(data);
+                    if (data.code == 1000) { //判断json的状态
+                        swal({
+                            title: '删除成功',
+                            type: 'success',  //展示成功的图片
+                            timer: 500,  //延时500毫秒
+                            showConfirmButton: false  //关闭确认框
+                        }, function () {
+                            window.location.href = "/shopping_cart/";  //跳转
+                        });
+                    } else {
+                        swal("删除失败！", data.error,
+                            "error");
+                    }
+
+                },
+                error: function (data) {
+                    swal("删除失败！请求异常", data.error, "error");
+                }
+            })
+
+        })
+    </script>
+
+
+{% endblock %}

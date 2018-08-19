@@ -16,11 +16,19 @@ Including another URLconf
 from django.conf.urls import url,include
 from django.contrib import admin
 from api import api_urls
+from api.views import html
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api/(?P<version>\w+)/', include(api_urls)),
-    url(r'',include(api_urls))
+    url(r'^$', html.index),
+    url(r'^index/$', html.index),
+    url(r'^login/$', html.login),
+    url(r'^logout/$', html.logout),
+    url(r'^course/$', html.course),
+    url(r'course/(?P<pk>\d+)/$',html.course_detail),
+    url(r'^news/$', html.news),
+    url(r'^shopping_cart/$', html.shopping_cart),
 ]
 
 

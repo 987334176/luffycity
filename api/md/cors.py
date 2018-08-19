@@ -12,3 +12,11 @@ class CorsMiddleware(MiddlewareMixin):
         #     # response["Access-Control-Allow-Methods"] = settings.CORS_METHODS
         #     # response["Access-Control-Allow-Headers"] = settings.CORS_HEADERS
         return response
+
+
+
+dic = {
+    'id':1
+}
+dic['name'] = 'xiao'
+

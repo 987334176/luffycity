@@ -20,6 +20,7 @@ class AuthView(ViewSetMixin,APIView):
         try:
             user = request.data.get('username')
             pwd = request.data.get('password')
+            print(user,pwd)
             # 验证用户和密码
             obj = models.Account.objects.filter(username=user,password=pwd).first()
             if not obj:
@@ -31,11 +32,17 @@ class AuthView(ViewSetMixin,APIView):
                 # user=obj,这个是判断条件。当条件成立,更新token字段,值为uid
                 # 当条件不成立时,增加一条记录。注意:增加时,有2个字段,分别是user和token
                 models.UserToken.objects.update_or_create(user=obj, defaults={'token': uid})
-                response.code = 99999
+                response.code = 1000
                 response.data = uid
+
+                # 增加session
+                request.session['token'] = uid
+                # request.session['userid'] = obj.id
+                request.session['user'] = obj
 
         except Exception as e:
             response.code = 10005
             response.error = '操作异常'
 
+        print(response.dict)
         return Response(response.dict)

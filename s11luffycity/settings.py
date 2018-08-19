@@ -123,6 +123,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS=[
+    os.path.join(BASE_DIR,"static")
+]
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS':'rest_framework.versioning.URLPathVersioning',
     'VERSION_PARAM':'version',
@@ -173,7 +176,7 @@ REDIS_SERVER = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://192.168.218.140:6379",
+        "LOCATION": "redis://192.168.142.129:6379",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {"max_connections": 100},

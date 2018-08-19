@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+<div id="app">
+    <!--导航条-->
+    <nav class="navbar navbar-default">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                        data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">
+                    <img src="/static/images/login.png" width="30px" height="30px" style="margin-top: -5px;">
+                </a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li><a href="/index/">首页</a></li>
+
+                    {#            <router-link to="/" tag='li' activeClass='active' exact>#}
+                    {#              <a>首页</a>#}
+                    {#            </router-link>#}
+                    <li><a href="/course/">课程</a></li>
+                    {#            <router-link to="/course" tag='li' activeClass='active' exact>#}
+                    {#              <a>课程</a>#}
+                    {#            </router-link>#}
+                    <li><a href="/news/">深科技</a></li>
+                    {#            <router-link to="/news" tag='li' activeClass='active' exact>#}
+                    {#              <a>深科技</a>#}
+                    {#            </router-link>#}
+
+                </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    {% if request.session.user.username %}
+                        <li><a href="#">{{ request.session.user.username }}</a></li>
+                        <li><a href="/logout/">注销</a></li>
+                    {% else %}
+                        <li><a href="/login/">登录</a></li>
+{#                        <li class="dropdown">#}
+                        <li><a href="#">注册</a></li>
+                    {% endif %}
+                    <li><a href="/shopping_cart/">购物车</a></li>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
+    </nav>
+    <!--路由出口-->
+    {#    <router-view></router-view>#}
+
+    <div class="container-fluid">
+    {% csrf_token %}
+        <div class="row clearfix">
+            {% block content %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
