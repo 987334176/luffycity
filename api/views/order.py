@@ -1,269 +1,319 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
 import json
-import redis
+import time
+import random
+import datetime
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
+
 from rest_framework.views import APIView
-from rest_framework.viewsets import ViewSetMixin
 from rest_framework.response import Response
-from api.utils.auth import LuffyAuthentication
-from api import models
-from api.utils.response import BaseResponse
 
-from django_redis import get_redis_connection
+from api.utils.auth.token_auth import LuffyTokenAuthentication
+from api.utils.auth.token_permission import LuffyPermission
+from api.utils import redis_pool
+from api.utils.alipay import AliPay
 
-CONN = get_redis_connection("default")
-
-"""
-{
-    payment_2_1:{
-        id:1,
-        name:'Python基础',
-        img:'xxx',
-        price:99.99,
-        period:90,
-        period_display:3个月,
-        default_coupon_id:0,
-        coupon_dict:{
-            '1':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '2':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '3':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-        }
-    },
-    payment_2_3:{
-        id:2,
-        name:'Python进阶',
-        img:'xxx',
-        price:99.99,
-        period:90,
-        period_display:3个月,
-        default_coupon_id:0,
-        coupon_dict:{
-            '1':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '2':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '3':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-        }
-    },
-    global_coupon_2:{
-        '1':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '2':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-            '3':{'type':0,'text':'立减','money_equivalent_value':'xx','off_percent':'xx','minimum_consume'},
-    }
-}
+from repository import models
 
 
-"""
+def generate_order_num():
+    """
+    生成订单编号, 且必须唯一
+    :return:
+    """
+    while True:
+        order_num = time.strftime('%Y%m%d%H%M%S', time.localtime()) + str(random.randint(111, 999))
+        if not models.Order.objects.filter(order_number=order_num).exists():
+            break
+    return order_num
 
 
-class OrderView(ViewSetMixin, APIView):
-    authentication_classes = [LuffyAuthentication, ]
+def generate_transaction_num():
+    """
+    生成流水编号, 且必须唯一
+    :return:
+    """
+    while True:
+        transaction_number = time.strftime('%Y%m%d%H%M%S', time.localtime()) + str(random.randint(111, 999))
+        if not models.TransactionRecord.objects.filter(transaction_number=transaction_number).exists():
+            break
+    return transaction_number
 
-    def create(self, request, *args, **kwargs):
+
+class PayOrderView(APIView):
+    authentication_classes = [LuffyTokenAuthentication, ]
+    permission_classes = [LuffyPermission, ]
+
+    def post(self, request, *args, **kwargs):
         """
-        立即支付
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        response = BaseResponse()
+        去支付，生成订单。
+        获取前端提交的购买信息
+            {
+                course_price_list:[
+                    {'policy_id':1, '':'course_id':1, 'coupon_record_id':1},
+                    {'policy_id':2, '':'course_id':2, 'coupon_record_id':2},
+                ],
+                coupon_record_id:1,
+                alipay: 99,
+                balance: 1
+            }
 
+        1. 用户提交
+            - balance
+            - alipay
+        2. 获取去结算列表
+
+        课程
+        3. 循环所有课程
+            - 获取原价
+            - 抵扣的钱
+
+
+
+
+        :param request: 
+        :param args: 
+        :param kwargs: 
+        :return: 
+        """
+        response = {'code': 1000}
         try:
-            # 1. 接收用户发送的数据
             """
-            {'balance':1000,'alipay':228 }
+            1. 获取用户提交数据
+                - 获取支付金额
+                - 获取贝里抵扣金额
             """
-            balance = request.data.get('balance')  # 贝里
-            # print(balance)
-            if balance.isdigit():
-                balance = int(balance)
-            else:
-                return Response('贝里非法')
+            policy_course_list = request.data.get('course_price_list')
+            coupon_record_id = request.data.get('coupon_record_id')
+            alipay = request.data.get('alipay')  # >= 0
+            balance = request.data.get('balance')  # >= 0
 
-            alipay = request.data.get('alipay')  # 支付金额
-            print(balance,alipay)
+            if balance > request.user.balance:
+                raise Exception('账户中贝里余额不足')
 
-            # 2. 检验贝里余额是否够用
-            # print(request.user.balance)
-            # print(request.user.balance < balance)
+            # 检查用户提交的信息在 redis结算列表 中是否存在，如果不存在，则需要用户从购物车中再次去结算
+            payment_dict_bytes = redis_pool.conn.hget(settings.REDIS_PAYMENT_KEY, request.user.id)
+            payment_dict = json.loads(payment_dict_bytes.decode('utf-8'))
 
-            # print(type(request.user.balance),type(balance))
-            # print(request.user.balance < balance)
-            if request.user.balance < balance:
-                return Response('贝里余额不足')
+            policy_course_dict = payment_dict['policy_course_dict']
+            global_coupon_record_dict = payment_dict['global_coupon_record_dict']
 
-            # 3.获取结算中心的每个课程信息并应用优惠券
-            #3.1 获取当前用户结算中心的所有key
-            key = "payment_%s*" % request.user.id
-            key_list = CONN.keys(key)
-            # print(key_list)
+            global_coupon_record = {}
+            # 全局优惠券
+            if coupon_record_id:
+                if coupon_record_id not in global_coupon_record_dict:
+                    raise Exception('全局优惠券在缓存中不存在')
+                global_coupon_record = global_coupon_record_dict[coupon_record_id]
+
+            # 当前时间
+            current_date = datetime.datetime.now().date()
+            current_datetime = datetime.datetime.now()
+
+            # 原价
             total_price = 0
+            # 总抵扣的钱
             discount = 0
+            # 使用优惠券ID列表
+            if coupon_record_id:
+                use_coupon_record_id_list = [coupon_record_id, ]
+            else:
+                use_coupon_record_id_list = []
+            # 课程和优惠券
+            buy_course_record = []
 
-            coupon_id_list = []
+            for cp in policy_course_list:
+                _policy_id = cp['policy_id']
+                _course_id = cp['course_id']
+                _coupon_record_id = cp['coupon_record_id']
 
-            course_dict = {}
-            #3.2 根据key获取结算中心的课程
-            for key in key_list:
-                # print(11)
-                id = CONN.hget(key, 'id').decode('utf-8')
-                print(id)
-                name = CONN.hget(key, 'name').decode('utf-8')
-                print(name)
-                img = CONN.hget(key, 'img').decode('utf-8')
-                print(img)
-                price_id = CONN.hget(key, 'price_id').decode('utf-8')
-                print(price_id)
-                price = CONN.hget(key, 'price').decode('utf-8')
-                print(price)
-                valid_period = CONN.hget(key, 'valid_period').decode('utf-8')
-                print(valid_period)
-                # period_display = CONN.hget(key, 'period_display').decode('utf-8')
-                # print(period_display)
-                # default_coupon_id = CONN.hget(key, 'default_coupon_id').decode('utf-8')
-                # print(default_coupon_id)
-                # discount_price = CONN.hget(key, 'discount_price').decode('utf-8')
-                # print(discount_price)
-                # coupon_dict = json.loads(CONN.hget(key, 'coupon_dict').decode('utf-8'))
-                # print(coupon_dict)
-                # print(1111)
-                # print(price,type(price))
-                price = float(price)
-                # print(1111)
-                # 3.3 计算总原价
-                # print(price)
-                total_price += price
-                # print(total_price)
-                print(total_price,'总价')
+                temp = {
+                    'course_id': _course_id,
+                    'course_name': "course",
+                    'valid_period': 0,  # 有效期：30
+                    'period': 0,  # 有效期：一个月
+                    'original_price': 0,
+                    'price': 0,
+                }
+                if str(_course_id) not in policy_course_dict:
+                    raise Exception('课程在缓存中不存在')
 
-                if default_coupon_id == 0:
-                    # 未使用
-                    discount += 0
+                redis_course = policy_course_dict[str(_course_id)]
+
+                if str(_policy_id) != str(redis_course['policy_id']):
+                    raise Exception('价格策略在缓存中不存在')
+
+                # 课程是否已经下线或价格策略被修改
+                policy_object = models.PricePolicy.objects.get(id=_policy_id)  # 价格策略对象
+                course_object = policy_object.content_object  # 课程对象
+
+                if course_object.id != _course_id:
+                    raise Exception('课程和价格策略对应失败')
+                if course_object.status != 0:
+                    raise Exception('课程已下线，无法购买')
+
+                # 选择的优惠券是否在缓存中
+                redis_coupon_list = redis_course['coupon_record_list']
+                redis_coupon_record = None
+                for item in redis_coupon_list:
+                    if item['id'] == _coupon_record_id:
+                        redis_coupon_record = item
+                        break
+                if not redis_coupon_record:
+                    raise Exception('单课程优惠券在缓存中不存在')
+
+                # 计算购买原总价
+                total_price += policy_object.price
+
+                # 未使用单课程优惠券
+                if redis_coupon_record['id'] == 0:
+                    temp['price'] = policy_object.price
+                    buy_course_record.append(temp)
+                    continue
+
+                temp['original_price'] = policy_object.price
+                temp['valid_period'] = redis_coupon_record['policy_valid_period']
+                temp['period'] = redis_coupon_record['policy_period']
+
+                # 缓存中的优惠券是否已经过期
+                begin_date = redis_coupon_record.get('begin_date')
+                end_date = redis_coupon_record.get('end_date')
+                if begin_date:
+                    if current_date < begin_date:
+                        raise Exception('优惠券使用还未到时间')
+                if end_date:
+                    if current_date > end_date:
+                        raise Exception('优惠券已过期')
+
+                # 使用的是单课程优惠券抵扣了多少钱；使用的 个人优惠券ID
+                if redis_coupon_record['type'] == 0:
+                    # 通用优惠券
+                    money = redis_coupon_record['money_equivalent_value']
+                    discount += money
+                elif redis_coupon_record['type'] == 1:
+                    # 满减券
+                    money = redis_coupon_record['money_equivalent_value']
+                    minimum_consume = redis_coupon_record['minimum_consume']
+                    if policy_object.price >= minimum_consume:
+                        discount += money
+                elif redis_coupon_record['type'] == 2:
+                    # 打折券
+                    money = policy_object.price * redis_coupon_record['off_percent']
+                    discount += money
+
+                temp['price'] = policy_object.price - money
+                buy_course_record.append(temp)
+                use_coupon_record_id_list.append(redis_coupon_record['id'])
+
+            # 全局优惠券
+            print(global_coupon_record)
+            begin_date = global_coupon_record.get('begin_date')
+            end_date = global_coupon_record.get('end_date')
+            if begin_date:
+                if current_date < begin_date:
+                    raise Exception('优惠券使用还未到时间')
+            if end_date:
+                if current_date > end_date:
+                    raise Exception('优惠券已过期')
+
+            # 使用全局优惠券抵扣了多少钱
+            if global_coupon_record.get('type') == 0:
+                # 通用优惠券
+                money = global_coupon_record['money_equivalent_value']
+                discount += money
+            elif global_coupon_record.get('type') == 1:
+                # 满减券
+                money = global_coupon_record['money_equivalent_value']
+                minimum_consume = global_coupon_record['minimum_consume']
+                if (total_price - discount) >= minimum_consume:
+                    discount += money
+            elif global_coupon_record.get('type') == 2:
+                # 打折券
+                money = (total_price - discount) * global_coupon_record['off_percent']
+                discount += money
+
+            # 贝里抵扣的钱
+            if balance:
+                discount += balance
+
+            if (alipay + discount) != total_price:
+                raise Exception('总价、优惠券抵扣、贝里抵扣和实际支付的金额不符')
+
+            # 创建订单 + 支付宝支付
+            # 创建订单详细
+            # 贝里抵扣 + 贝里记录
+            # 优惠券状态更新
+            actual_amount = 0
+            if alipay:
+                payment_type = 1  # 支付宝
+                actual_amount = alipay
+            elif balance:
+                payment_type = 3  # 贝里
+            else:
+                payment_type = 2  # 优惠码
+
+            with transaction.atomic():
+                order_num = generate_order_num()
+                if payment_type == 1:
+                    order_object = models.Order.objects.create(
+                        payment_type=payment_type,
+                        order_number=order_num,
+                        account=request.user,
+                        actual_amount=actual_amount,
+                        status=1,  # 待支付
+                    )
                 else:
-                    pass
-                    # # 使用优惠券
-                    # if coupon_dict['type'] == 0:
-                    #     discount += price if coupon_dict['money_equivalent_value'] > price else coupon_dict[
-                    #         'money_equivalent_value']
-                    # elif coupon_dict['type'] == 1:
-                    #     pass
-                    # elif coupon_dict['type'] == 2:
-                    #     discount += price * （100 - 折扣） / 100
-                    #
-                    # coupon_id_list.append(default_coupon_id)
+                    order_object = models.Order.objects.create(
+                        payment_type=payment_type,
+                        order_number=order_num,
+                        account=request.user,
+                        actual_amount=actual_amount,
+                        status=0,  # 支付成功，优惠券和贝里已够支付
+                        pay_time=current_datetime
+                    )
 
-            """
-                3.1 获取当前用户结算中心的所有key
-                    key = "payment_%s*" %request.user.id
-                    key_list = CONN.keys(key)
+                for item in buy_course_record:
+                    detail = models.OrderDetail.objects.create(
+                        order=order_object,
+                        content_object=models.Course.objects.get(id=item['course_id']),
+                        original_price=item['original_price'],
+                        price=item['price'],
+                        valid_period_display=item['period'],
+                        valid_period=item['valid_period']
+                    )
+                models.Account.objects.filter(id=request.user.id).update(balance=F('balance') - balance)
+                models.TransactionRecord.objects.create(
+                    account=request.user,
+                    amount=request.user.balance,
+                    balance=request.user.balance - balance,
+                    transaction_type=1,
+                    content_object=order_object,
+                    transaction_number=generate_transaction_num()
+                )
+                effect_row = models.CouponRecord.objects.filter(id__in=use_coupon_record_id_list).update(
+                    order=order_object,
+                    used_time=current_datetime)
 
+                if effect_row != len(use_coupon_record_id_list):
+                    raise Exception('优惠券使用失败')
 
-                total_price = 0
-                discount = 0
+                response['payment_type'] = payment_type
+                # 生成支付宝URL地址
+                if payment_type == 1:
+                    pay = AliPay(debug=True)
+                    query_params = pay.direct_pay(
+                        subject="路飞学城",  # 商品简单描述
+                        out_trade_no=order_num,  # 商户订单号
+                        total_amount=actual_amount,  # 交易金额(单位: 元 保留俩位小数)
+                    )
+                    pay_url = "https://openapi.alipaydev.com/gateway.do?{}".format(query_params)
 
-                coupon_id_list = []
+                    response['pay_url'] = pay_url
 
-                course_dict = {}
+        except IndentationError as e:
+            response['code'] = 1001
+            response['msg'] = str(e)
 
-                3.2 根据key获取结算中心的课程
-                    for key in key_list:
-                        id = CONN.hget(key,'id').decode('utf-8')
-                        name = CONN.hget(key,'name').decode('utf-8')
-                        img = CONN.hget(key,'img').decode('utf-8')
-                        price = CONN.hget(key,'price').decode('utf-8')
-                        period = CONN.hget(key,'period').decode('utf-8')
-                        period_display = CONN.hget(key,'period_display').decode('utf-8')
-                        default_coupon_id = CONN.hget(key,'default_coupon_id').decode('utf-8')
-                        coupon_dict = json.loads(CONN.hget(key,'coupon_dict').decode('utf-8'))
-
-                        # 3.3 计算总原价
-                        total_price += price
-                        # 3.4 计算要抵扣的价格
-                        if default_coupon_id == 0:
-                            # 未使用
-                            discount += 0
-                        else:
-                            # 使用优惠券
-                            if coupon_dict['type'] == 0:    
-                                discount += price if coupon_dict['money_equivalent_value'] > price else coupon_dict['money_equivalent_value']
-                            elif coupon_dict['type'] == 1:
-                                pass 
-                            elif coupon_dict['type'] == 2:
-                                discount += price * （100-折扣）/ 100
-
-                            coupon_id_list.append(default_coupon_id)
-
-                        # 封装字典,用于订单插入
-                        course_dict[id] = {
-                            id = CONN.hget(key,'id').decode()
-                            name = CONN.hget(key,'name').decode()
-                            price = CONN.hget(key,'price').decode()
-                            period = CONN.hget(key,'period').decode()
-                            default_coupon_id = CONN.hget(key,'default_coupon_id').decode(),
-                            price:999,
-                            discount:99,
-
-                        }
-
-                3
-
-            """
-
-            # 4.处理未绑定课程的优惠券
-            """
-                4.1 去redis中获取 global_coupon_2
-
-                    default_coupon_id = CONN.hget('global_coupon_2','default_coupon_id')
-                    coupon_dict = CONN.hget('global_coupon_2','coupon_dict')
-
-                4.2 判断是否使用优惠券
-                    if default_coupon_id == 0:
-                        pass
-                    else:
-                         # 使用优惠券
-                            if coupon_dict['type'] == 0:    
-                                discount += price if coupon_dict['money_equivalent_value'] > price else coupon_dict['money_equivalent_value']
-                            elif coupon_dict['type'] == 1:
-                                pass 
-                            elif coupon_dict['type'] == 2:
-                                discount += price * （100-折扣）/ 100
-
-                            coupon_id_list.append(default_coupon_id)
-
-            """
-
-            # 5. 判断是否：total_price-discount-balance/10 = alipay
-            # total_price = 0
-            # discount = 0
-            # balance
-            # alipay
-            # raise Exception('价格对不上')
-
-            # 6. 生成订单
-            """
-            with transcation.atomic():
-                6.1  obj = models.Order.objects.create(...)
-
-                6.2  创建多个订单详细
-                    for k,v in course_dict.items():
-                        detail = OrderDetail.objects.create(order=obj)
-                                 EnrolledCourse.objects.create(..,order_detail=detail)
-
-                6.3 更新优惠券
-                    count = models.CouponRecord.objects.filter(id__in=coupon_id_list).update(status=2)
-                    if count != len(coupon_id_list):
-                         报错..
-
-                6.4 更新贝里余额
-                    models.account.objects.filter(id=request.user.id).update(balance=F('balance')-balance)
-
-                6.5 创建贝里转账记录
-                    models.TransactionRecord.objects.create(,,balance)
-
-            """
-
-            # 7. 生成去支付宝支付的连接
-
-
-        except Exception as e:
-            print(e)
-            pass
-
-        return Response('ok')
+        return Response(response)
